@@ -2,6 +2,8 @@
 
 A fully interactive, single-page robot website built with pure HTML, CSS, and JavaScript. No frameworks, no libraries, no installation required — just open in a browser.
 
+![Cursor Bot Preview](preview.png)
+
 ---
 
 ## 🌐 Live Demo
