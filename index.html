@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Curse Bot</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse at 45% 30%, #8ec5fc 0%, #8a7ef5 55%, #a044d0 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      cursor: none;
+      user-select: none;
+      transition: background 0.55s ease;
+    }
+
+    /* ── Cursor ── */
+    #cursor {
+      position: fixed;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width .12s, height .12s, background .12s;
+    }
+
+    #cursor.clicking {
+      width: 12px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* ── Header ── */
+    header {
+      position: fixed;
+      top: 28px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.6rem;
+      font-weight: 900;
+      letter-spacing: 10px;
+      color: #fff;
+      text-shadow: 0 0 40px rgba(150, 200, 255, 0.9), 0 4px 20px rgba(0, 0, 0, 0.22);
+    }
+
+    header p {
+      font-size: 0.7rem;
+      letter-spacing: 3.5px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 4px;
+    }
+
+    /* ── Scene ── */
+    .scene {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 26px;
+      margin-top: 32px;
+    }
+
+    /* ── Emotion label bubble ── */
+    .emotion-tag {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 50px;
+      padding: 8px 22px;
+      font-size: 0.8rem;
+      letter-spacing: 3px;
+      color: rgba(255, 255, 255, 0.9);
+      transition: color 0.5s ease;
+      min-width: 180px;
+      text-align: center;
+    }
+
+    /* ════════════════════════════
+       ROBOT
+    ════════════════════════════ */
+    .robot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: float 4.2s ease-in-out infinite;
+      filter: drop-shadow(0 28px 55px rgba(60, 30, 180, 0.45));
+      transition: filter 0.5s ease;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-16px);
+      }
+    }
+
+    .robot.excited {
+      animation: floatFast 1.8s ease-in-out infinite;
+    }
+
+    @keyframes floatFast {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-22px);
+      }
+    }
+
+    .robot.angry {
+      filter: drop-shadow(0 28px 55px rgba(200, 40, 40, 0.5));
+    }
+
+    .robot.happy {
+      filter: drop-shadow(0 28px 55px rgba(60, 200, 160, 0.45));
+    }
+
+    /* Antenna */
+    .antenna {
+      width: 6px;
+      height: 28px;
+      background: linear-gradient(to top, #c8d4ec, #a8b4cc);
+      border-radius: 3px;
+      margin-bottom: -2px;
+      position: relative;
+      transition: background 0.55s ease;
+    }
+
+    .ant-ball {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 30%, #b0eeff, #22ccff, #0077bb);
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 0 10px #22ccff, 0 0 22px rgba(34, 204, 255, 0.7);
+      animation: antPulse 2.2s ease-in-out infinite;
+      transition: background 0.5s, box-shadow 0.5s;
+    }
+
+    @keyframes antPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 10px var(--ant-clr, #22ccff), 0 0 22px rgba(34, 204, 255, 0.6);
+      }
+
+      50% {
+        box-shadow: 0 0 18px var(--ant-clr, #22ccff), 0 0 40px rgba(34, 204, 255, 0.9);
+      }
+    }
+
+    /* Head shell */
+    .robot-head {
+      width: 214px;
+      height: 178px;
+      background: linear-gradient(145deg, #f4f8ff, #dce6f8 60%, #c8d6ee);
+      border-radius: 40px;
+      position: relative;
+      box-shadow:
+        inset 0 5px 10px rgba(255, 255, 255, 0.95),
+        inset 0 -5px 10px rgba(140, 155, 210, 0.22),
+        4px 8px 24px rgba(80, 60, 200, 0.18);
+      z-index: 2;
+      transition: background 0.55s ease, box-shadow 0.5s;
+    }
+
+    /* Face screen */
+    .face-panel {
+      position: absolute;
+      width: 168px;
+      height: 108px;
+      background: linear-gradient(155deg, #0b1a35, #070e20);
+      border-radius: 22px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 8px 18px 10px;
+      box-shadow:
+        0 0 0 1.5px rgba(80, 160, 255, 0.18),
+        0 0 22px rgba(0, 0, 0, 0.55),
+        inset 0 0 28px rgba(0, 40, 100, 0.4);
+      overflow: visible;
+      /* eyebrows poke out */
+    }
+
+    /* Scanlines */
+    .face-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 22px;
+      background: repeating-linear-gradient(to bottom, transparent 0, transparent 3px,
+          rgba(0, 80, 180, 0.04) 3px, rgba(0, 80, 180, 0.04) 4px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Eye column */
+    .eye-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Eyebrow ── */
+    .eyebrow {
+      width: 36px;
+      height: 4px;
+      background: rgba(50, 190, 255, 0.75);
+      border-radius: 2px;
+      box-shadow: 0 0 9px rgba(50, 190, 255, 0.7);
+      transition: transform 0.45s cubic-bezier(.4, 0, .2, 1),
+        background 0.45s ease,
+        box-shadow 0.45s ease;
+      transform-origin: center;
+    }
+
+    /* ── Eye socket (clipping boundary) ── */
+    .eye-socket {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #050c1c;
+      box-shadow:
+        inset 0 0 14px rgba(0, 0, 0, 0.8),
+        0 0 0 1.5px rgba(50, 160, 255, 0.18);
+      transition: box-shadow 0.4s ease, transform 0.35s ease;
+    }
+
+    /* ── Pupil ── */
+    .pupil {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 36% 32%, #d0f5ff, #28d8ff 48%, #0088cc);
+      box-shadow: 0 0 8px #28d8ff, 0 0 20px rgba(40, 216, 255, 0.8), 0 0 36px rgba(40, 216, 255, 0.35);
+      transform: translate(-50%, -50%);
+      transition:
+        background 0.45s ease,
+        box-shadow 0.45s ease,
+        width 0.35s ease,
+        height 0.35s ease;
+      will-change: transform;
+      z-index: 2;
+    }
+
+    /* Pupil highlight */
+    .pupil::after {
+      content: '';
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      top: 4px;
+      left: 5px;
+    }
+
+    /* ── Lids (inside socket, clipped to circle) ── */
+    .lid-upper,
+    .lid-lower,
+    .lid-blink {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: #050c1c;
+      z-index: 3;
+      transition: transform 0.35s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    .lid-upper {
+      top: 0;
+      height: 50%;
+      transform: translateY(-100%);
+      /* hidden above */
+    }
+
+    .lid-lower {
+      bottom: 0;
+      height: 50%;
+      transform: translateY(100%);
+      /* hidden below */
+    }
+
+    .lid-blink {
+      top: 0;
+      bottom: 0;
+      height: 100%;
+      transform: scaleY(0);
+      transform-origin: top center;
+      transition: transform 0.08s ease-in;
+    }
+
+    /* Neck */
+    .neck {
+      width: 64px;
+      height: 18px;
+      background: linear-gradient(to bottom, #c8d4ec, #dde6f5);
+      box-shadow: 0 4px 10px rgba(80, 80, 180, 0.14);
+      border-radius: 0 0 4px 4px;
+      position: relative;
+      z-index: 1;
+      transition: background 0.55s ease;
+    }
+
+    /* Body */
+    .robot-body {
+      width: 200px;
+      height: 155px;
+      background: linear-gradient(145deg, #f2f6ff, #d8e2f5 60%, #c8d4ec);
+      border-radius: 52px;
+      position: relative;
+      margin-top: -4px;
+      box-shadow:
+        inset 0 6px 14px rgba(255, 255, 255, 0.85),
+        inset 0 -6px 12px rgba(140, 155, 210, 0.28),
+        0 10px 28px rgba(70, 50, 190, 0.2);
+      z-index: 1;
+      transition: background 0.55s ease, box-shadow 0.5s;
+    }
+
+    /* Chest panel */
+    .chest-panel {
+      position: absolute;
+      width: 76px;
+      height: 34px;
+      background: linear-gradient(140deg, #0d1b36, #070e1e);
+      border-radius: 10px;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 0 0 1px rgba(60, 120, 255, 0.14), inset 0 0 12px rgba(0, 30, 80, 0.5);
+    }
+
+    .c-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+
+    .c-dot:nth-child(1) {
+      background: #ff5f5f;
+      box-shadow: 0 0 6px #ff5f5f;
+    }
+
+    .c-dot:nth-child(2) {
+      background: #ffe246;
+      box-shadow: 0 0 6px #ffe246;
+    }
+
+    .c-dot:nth-child(3) {
+      background: #44ffaa;
+      box-shadow: 0 0 6px #44ffaa;
+      animation: cdBlink 1.6s ease-in-out infinite;
+    }
+
+    @keyframes cdBlink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .2
+      }
+    }
+
+    /* Arms */
+    .arm {
+      position: absolute;
+      width: 44px;
+      height: 104px;
+      background: linear-gradient(155deg, #f2f6ff, #cdd8ee);
+      border-radius: 30px;
+      top: 10px;
+      box-shadow:
+        inset 3px 3px 7px rgba(255, 255, 255, 0.85),
+        inset -3px -3px 7px rgba(130, 145, 200, 0.28),
+        3px 6px 16px rgba(70, 50, 180, 0.14);
+      transition: background 0.55s ease, box-shadow 0.55s ease, transform 0.4s ease;
+    }
+
+    .arm.left {
+      left: -28px;
+      transform: rotate(-14deg);
+    }
+
+    .arm.right {
+      right: -28px;
+      transform: rotate(14deg);
+    }
+
+    /* Excited arms wave */
+    .robot.excited .arm.left {
+      transform: rotate(-28deg);
+    }
+
+    .robot.excited .arm.right {
+      transform: rotate(28deg);
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50px;
+      padding: 10px 28px;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 0.72rem;
+      letter-spacing: 1.8px;
+    }
+
+    .status-bar .sep {
+      width: 1px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #44ffaa;
+      box-shadow: 0 0 8px #44ffaa;
+      animation: cdBlink 1.4s infinite;
+    }
+
+    /* ── Hint ── */
+    .hint {
+      position: fixed;
+      bottom: 26px;
+      font-size: 0.7rem;
+      letter-spacing: 2.5px;
+      color: rgba(255, 255, 255, 0.42);
+      animation: hintFade 8s ease forwards;
+    }
+
+    @keyframes hintFade {
+
+      0%,
+      60% {
+        opacity: 1
+      }
+
+      100% {
+        opacity: 0
+      }
+    }
+
+    /* ── Particles ── */
+    .particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .p {
+      position: absolute;
+      border-radius: 50%;
+      animation: pFloat linear infinite;
+      opacity: 0;
+    }
+
+    @keyframes pFloat {
+      0% {
+        transform: translateY(0) scale(1);
+        opacity: 0;
+      }
+
+      8% {
+        opacity: .5;
+      }
+
+      92% {
+        opacity: .2;
+      }
+
+      100% {
+        transform: translateY(-108vh) scale(.35);
+        opacity: 0;
+      }
+    }
+
+    /* ── Ripple ── */
+    .ripple {
+      position: fixed;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.65);
+      pointer-events: none;
+      z-index: 9000;
+      animation: rippleOut .6s ease-out forwards;
+    }
+
+    @keyframes rippleOut {
+      from {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: .85;
+      }
+
+      to {
+        transform: translate(-50%, -50%) scale(3.8);
+        opacity: 0;
+      }
+    }
+
+    /* ── Tear drop (sad) ── */
+    .tear {
+      position: absolute;
+      width: 6px;
+      height: 10px;
+      background: radial-gradient(ellipse at 50% 20%, #88ccff, #4499ee);
+      border-radius: 50% 50% 60% 60%;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      animation: tearDrop 1.8s ease-in forwards;
+      z-index: 5;
+    }
+
+    @keyframes tearDrop {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      15% {
+        opacity: 0.9;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(28px);
+      }
+    }
+
+    /* ── RAGE sequence ── */
+    @keyframes rageShake {
+      0%,100% { transform: translateX(0) rotate(0deg); }
+      12%  { transform: translateX(-16px) rotate(-5deg); }
+      25%  { transform: translateX(16px)  rotate(5deg); }
+      37%  { transform: translateX(-13px) rotate(-4deg); }
+      50%  { transform: translateX(13px)  rotate(4deg); }
+      62%  { transform: translateX(-10px) rotate(-3deg); }
+      75%  { transform: translateX(10px)  rotate(3deg); }
+      87%  { transform: translateX(-6px)  rotate(-2deg); }
+    }
+    .robot.rage-shake {
+      animation: rageShake 0.55s ease-in-out !important;
+      filter: drop-shadow(0 0 40px rgba(255,50,50,1)) !important;
+    }
+    @keyframes ragePunch {
+      0%   { transform: scale(1)    translateY(0); }
+      35%  { transform: scale(1.1)  translateY(-14px); }
+      62%  { transform: scale(1.18) translateY(8px); }
+      100% { transform: scale(1)    translateY(0); }
+    }
+    .robot.rage-punch {
+      animation: ragePunch 0.45s ease-in-out !important;
+      filter: drop-shadow(0 0 50px rgba(255,30,30,1)) !important;
+    }
+    .robot.rage-punch .arm.left {
+      animation: punchArmL 0.45s ease-in-out forwards !important;
+    }
+    .robot.rage-punch .arm.right {
+      animation: punchArmR 0.45s ease-in-out forwards !important;
+    }
+    @keyframes punchArmL {
+      0%   { transform: rotate(-14deg); }
+      55%  { transform: rotate(-125deg) translateY(-18px) scaleX(1.15); }
+      100% { transform: rotate(-14deg); }
+    }
+    @keyframes punchArmR {
+      0%   { transform: rotate(14deg); }
+      55%  { transform: rotate(125deg)  translateY(-18px) scaleX(1.15); }
+      100% { transform: rotate(14deg); }
+    }
+    @keyframes rageExit {
+      0%   { transform: translateX(0)     rotate(0deg)  scale(1);    opacity: 1; }
+      18%  { transform: translateX(50px)  rotate(10deg) scale(1.06); opacity: 1; }
+      100% { transform: translateX(140vw) rotate(35deg) scale(0.65); opacity: 0; }
+    }
+    .robot.rage-exit {
+      animation: rageExit 1s cubic-bezier(.4,0,1,.8) forwards !important;
+    }
+    @keyframes rageReturn {
+      0%   { transform: translateX(-140vw) rotate(-20deg) scale(0.65); opacity: 0; }
+      100% { transform: translateX(0)      rotate(0deg)   scale(1);    opacity: 1; }
+    }
+    .robot.rage-return {
+      animation: rageReturn 0.85s cubic-bezier(0,.2,.4,1) forwards !important;
+    }
+    /* Screen flash on impact */
+    .screen-flash {
+      position: fixed; inset: 0; z-index: 7900;
+      background: white; pointer-events: none;
+      animation: sFlash 0.38s ease-out forwards;
+    }
+    @keyframes sFlash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+    /* Crack overlay */
+    .crack-overlay {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 8000;
+      opacity: 0; transition: opacity 0.12s ease;
+    }
+    .crack-overlay.show { opacity: 1; }
+    .crack-overlay.fade { opacity: 0; transition: opacity 1.8s ease; }
+    .crack-overlay svg  { width: 100%; height: 100%; }
+    .crack-line {
+      stroke: rgba(255,255,255,0.9); fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+      filter: drop-shadow(0 0 3px rgba(255,200,200,0.8));
+    }
+    .crack-line.sub { opacity: 0.5; filter: none; }
+
+    /* ══════════════════════════════════
+       DARK THEME
+    ══════════════════════════════════ */
+    body.dark {
+      background: radial-gradient(ellipse at 45% 30%, #04040f 0%, #0a0720 55%, #120528 100%);
+    }
+
+    body.dark .robot-head {
+      background: linear-gradient(145deg, #23263a, #191c2c 60%, #121422);
+      box-shadow:
+        inset 0 5px 10px rgba(255, 255, 255, 0.05),
+        inset 0 -5px 10px rgba(0, 0, 0, 0.55),
+        4px 8px 28px rgba(0, 0, 20, 0.65);
+    }
+
+    body.dark .robot-body {
+      background: linear-gradient(145deg, #23263a, #191c2c 60%, #121422);
+      box-shadow:
+        inset 0 6px 14px rgba(255, 255, 255, 0.04),
+        inset 0 -6px 12px rgba(0, 0, 0, 0.55),
+        0 10px 32px rgba(0, 0, 20, 0.65);
+    }
+
+    body.dark .arm {
+      background: linear-gradient(155deg, #23263a, #181b2a);
+      box-shadow:
+        inset 3px 3px 7px rgba(255, 255, 255, 0.04),
+        inset -3px -3px 7px rgba(0, 0, 0, 0.55),
+        3px 6px 18px rgba(0, 0, 20, 0.5);
+    }
+
+    body.dark .neck {
+      background: linear-gradient(to bottom, #191c2c, #23263a);
+    }
+
+    body.dark .antenna {
+      background: linear-gradient(to top, #191c2c, #111320);
+    }
+
+    body.dark .robot {
+      filter: drop-shadow(0 28px 60px rgba(120, 80, 255, 0.4));
+    }
+
+    body.dark .robot.angry {
+      filter: drop-shadow(0 28px 60px rgba(220, 60, 60, 0.5));
+    }
+
+    body.dark .robot.happy {
+      filter: drop-shadow(0 28px 60px rgba(40, 220, 160, 0.45));
+    }
+
+    body.dark .status-bar {
+      background: rgba(0, 0, 0, 0.35);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark .emotion-tag {
+      background: rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* ── Theme toggle slider ── */
+    .theme-toggle {
+      position: fixed;
+      top: 28px;
+      right: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 500;
+    }
+
+    .theme-icon {
+      font-size: 1rem;
+      line-height: 1;
+      opacity: 0.85;
+      transition: opacity 0.3s;
+    }
+
+    /* The track */
+    .t-switch {
+      position: relative;
+      width: 50px;
+      height: 27px;
+      cursor: pointer;
+    }
+
+    .t-switch input {
+      display: none;
+    }
+
+    .t-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      transition: background 0.4s ease, border-color 0.4s ease;
+    }
+
+    .t-switch input:checked~.t-track {
+      background: rgba(100, 80, 200, 0.55);
+      border-color: rgba(140, 120, 255, 0.4);
+    }
+
+    /* The thumb */
+    .t-thumb {
+      position: absolute;
+      width: 21px;
+      height: 21px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.35s cubic-bezier(.4, 0, .2, 1), background 0.3s;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+    }
+
+    .t-switch input:checked~.t-thumb {
+      transform: translateX(23px);
+      background: #c8b8ff;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="cursor"></div>
+  <div class="particles" id="particles"></div>
+
+  <!-- Crack overlay -->
+  <div class="crack-overlay" id="crackOverlay">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <!-- Main cracks radiating from impact centre ~50,42 -->
+      <polyline class="crack-line main" stroke-width="0.7" points="50,42 40,26 36,10 33,0"/>
+      <polyline class="crack-line main" stroke-width="0.6" points="50,42 58,22 62,5"/>
+      <polyline class="crack-line main" stroke-width="0.7" points="50,42 68,28 84,14 95,2"/>
+      <polyline class="crack-line main" stroke-width="0.6" points="50,42 76,36 100,32"/>
+      <polyline class="crack-line main" stroke-width="0.7" points="50,42 82,58 100,62"/>
+      <polyline class="crack-line main" stroke-width="0.6" points="50,42 68,74 74,100"/>
+      <polyline class="crack-line main" stroke-width="0.7" points="50,42 44,72 40,100"/>
+      <polyline class="crack-line main" stroke-width="0.6" points="50,42 26,66 6,82"/>
+      <polyline class="crack-line main" stroke-width="0.7" points="50,42 18,46 0,44"/>
+      <polyline class="crack-line main" stroke-width="0.6" points="50,42 24,24 6,12"/>
+      <!-- Sub-cracks -->
+      <polyline class="crack-line sub" stroke-width="0.35" points="38,16 30,22 26,18"/>
+      <polyline class="crack-line sub" stroke-width="0.35" points="74,20 82,28 76,34"/>
+      <polyline class="crack-line sub" stroke-width="0.35" points="90,50 80,56 86,64"/>
+      <polyline class="crack-line sub" stroke-width="0.35" points="62,82 56,90 64,95"/>
+      <polyline class="crack-line sub" stroke-width="0.35" points="20,58 14,66 8,62"/>
+      <polyline class="crack-line sub" stroke-width="0.35" points="44,28 38,34 42,40"/>
+    </svg>
+  </div>
+
+  <!-- Theme toggle -->
+  <div class="theme-toggle">
+    <span class="theme-icon">☀️</span>
+    <label class="t-switch" title="Toggle dark mode">
+      <input type="checkbox" id="themeCheck" />
+      <div class="t-track"></div>
+      <div class="t-thumb"></div>
+    </label>
+    <span class="theme-icon">🌙</span>
+  </div>
+
+  <header>
+    <h1>CURSOR BOT</h1>
+    <p>ADAPTIVE ROBOTIC INTELLIGENCE AGENT</p>
+  </header>
+
+  <div class="scene">
+
+    <!-- Emotion tag -->
+    <div class="emotion-tag" id="emotionTag">● NEUTRAL</div>
+
+    <!-- Robot -->
+    <div class="robot" id="robot">
+
+      <div class="antenna">
+        <div class="ant-ball" id="antBall"></div>
+      </div>
+
+      <div class="robot-head" id="robotHead">
+        <div class="face-panel">
+
+          <!-- Left eye column -->
+          <div class="eye-col">
+            <div class="eyebrow" id="browL"></div>
+            <div class="eye-socket" id="socketL">
+              <div class="pupil" id="pupilL"></div>
+              <div class="lid-upper" id="ulidL"></div>
+              <div class="lid-lower" id="llidL"></div>
+              <div class="lid-blink" id="blinkL"></div>
+            </div>
+          </div>
+
+          <!-- Right eye column -->
+          <div class="eye-col">
+            <div class="eyebrow" id="browR"></div>
+            <div class="eye-socket" id="socketR">
+              <div class="pupil" id="pupilR"></div>
+              <div class="lid-upper" id="ulidR"></div>
+              <div class="lid-lower" id="llidR"></div>
+              <div class="lid-blink" id="blinkR"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="neck"></div>
+
+      <div class="robot-body">
+        <div class="arm left"></div>
+        <div class="arm right"></div>
+        <div class="chest-panel">
+          <div class="c-dot"></div>
+          <div class="c-dot"></div>
+          <div class="c-dot"></div>
+        </div>
+      </div>
+
+    </div><!-- /robot -->
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="live-dot"></div>ONLINE
+      </div>
+      <div class="sep"></div>
+      <div class="status-item">EMOTION: <strong id="moodLabel">NEUTRAL</strong></div>
+      <div class="sep"></div>
+      <div class="status-item">TRACKING: <strong>CURSOR</strong></div>
+    </div>
+
+  </div>
+
+  <p class="hint">MOVE YOUR CURSOR &nbsp;·&nbsp; CLICK TO INTERACT</p>
+
+  <script>
+    /* ── Elements ── */
+    const cursor = document.getElementById('cursor');
+    const robot = document.getElementById('robot');
+    const browL = document.getElementById('browL');
+    const browR = document.getElementById('browR');
+    const socketL = document.getElementById('socketL');
+    const socketR = document.getElementById('socketR');
+    const pupilL = document.getElementById('pupilL');
+    const pupilR = document.getElementById('pupilR');
+    const ulidL = document.getElementById('ulidL');
+    const ulidR = document.getElementById('ulidR');
+    const llidL = document.getElementById('llidL');
+    const llidR = document.getElementById('llidR');
+    const blinkL = document.getElementById('blinkL');
+    const blinkR = document.getElementById('blinkR');
+    const moodLabel = document.getElementById('moodLabel');
+    const emotionTag = document.getElementById('emotionTag');
+    const antBall = document.getElementById('antBall');
+    const particles = document.getElementById('particles');
+
+    /* ── Emotion Definitions ── */
+    /*
+      browL/R.r   = rotation deg (+ = clockwise)
+      browL/R.y   = vertical shift px (- = up)
+      uLid        = upper lid slide-down % of socket height (0=hidden, 60=half eye covered)
+      lLid        = lower lid slide-up %
+      pupil.w/h   = size px
+      pupil.bg    = gradient string
+      pupil.glow  = box-shadow
+      ant         = antenna ball color
+    */
+    const EMOTIONS = {
+      neutral: {
+        label: '● NEUTRAL',
+        browL: { r: 0, y: 0 },
+        browR: { r: 0, y: 0 },
+        browColor: 'rgba(50,190,255,0.75)',
+        browGlow: '0 0 9px rgba(50,190,255,0.7)',
+        uLidL: 0, uLidR: 0,
+        lLidL: 0, lLidR: 0,
+        pupilW: 24, pupilH: 24,
+        pupilBg: 'radial-gradient(circle at 36% 32%, #d0f5ff, #28d8ff 48%, #0088cc)',
+        pupilGlow: '0 0 8px #28d8ff, 0 0 20px rgba(40,216,255,0.8)',
+        ant: '#22ccff',
+        socketGlow: '0 0 0 1.5px rgba(50,160,255,0.18)',
+        robotClass: '',
+      },
+      happy: {
+        label: '★ HAPPY',
+        browL: { r: 5, y: -3 },
+        browR: { r: -5, y: -3 },
+        browColor: 'rgba(80,255,180,0.85)',
+        browGlow: '0 0 10px rgba(80,255,180,0.8)',
+        uLidL: 32, uLidR: 32,   // squinting eyes
+        lLidL: 0, lLidR: 0,
+        pupilW: 28, pupilH: 28,
+        pupilBg: 'radial-gradient(circle at 36% 32%, #ccffee, #22ffaa 48%, #00aa66)',
+        pupilGlow: '0 0 10px #22ffaa, 0 0 26px rgba(34,255,170,0.85)',
+        ant: '#22ffaa',
+        socketGlow: '0 0 0 2px rgba(34,255,170,0.35)',
+        robotClass: 'happy',
+      },
+      excited: {
+        label: '⚡ EXCITED',
+        browL: { r: 0, y: -5 },
+        browR: { r: 0, y: -5 },
+        browColor: 'rgba(255,240,60,0.9)',
+        browGlow: '0 0 10px rgba(255,240,60,0.85)',
+        uLidL: 0, uLidR: 0,
+        lLidL: 0, lLidR: 0,
+        pupilW: 32, pupilH: 32,
+        pupilBg: 'radial-gradient(circle at 36% 32%, #ffffff, #ffe866 48%, #cc9900)',
+        pupilGlow: '0 0 12px #ffe866, 0 0 30px rgba(255,232,102,0.9)',
+        ant: '#ffe866',
+        socketGlow: '0 0 0 2px rgba(255,232,102,0.4)',
+        robotClass: 'excited',
+      },
+      surprised: {
+        label: '! SURPRISED',
+        browL: { r: 0, y: -7 },
+        browR: { r: 0, y: -7 },
+        browColor: 'rgba(200,160,255,0.9)',
+        browGlow: '0 0 10px rgba(200,160,255,0.85)',
+        uLidL: 0, uLidR: 0,
+        lLidL: 0, lLidR: 0,
+        pupilW: 16, pupilH: 16,   // small pupils = surprise
+        pupilBg: 'radial-gradient(circle at 36% 32%, #ffffff, #dd88ff 48%, #8800cc)',
+        pupilGlow: '0 0 10px #dd88ff, 0 0 24px rgba(221,136,255,0.85)',
+        ant: '#dd88ff',
+        socketGlow: '0 0 0 2.5px rgba(221,136,255,0.45)',
+        robotClass: '',
+      },
+      sad: {
+        label: '● SAD',
+        browL: { r: -14, y: 0 },   // inner corners raised (worried ∧)
+        browR: { r: 14, y: 0 },
+        browColor: 'rgba(100,140,200,0.65)',
+        browGlow: '0 0 6px rgba(100,140,200,0.5)',
+        uLidL: 0, uLidR: 0,
+        lLidL: 22, lLidR: 22,   // droopy lower lids
+        pupilW: 20, pupilH: 20,
+        pupilBg: 'radial-gradient(circle at 36% 32%, #aac8ee, #4488bb 48%, #223366)',
+        pupilGlow: '0 0 6px #4488bb, 0 0 14px rgba(68,136,187,0.5)',
+        ant: '#4488bb',
+        socketGlow: '0 0 0 1px rgba(68,136,187,0.2)',
+        robotClass: '',
+      },
+      angry: {
+        label: '▼ ANGRY',
+        browL: { r: 28, y: 3 },   // inner corners DOWN (\ / shape) — opposite of sad
+        browR: { r: -28, y: 3 },
+        browColor: 'rgba(255,80,60,0.9)',
+        browGlow: '0 0 12px rgba(255,80,60,0.85)',
+        uLidL: 40, uLidR: 40,   // heavy squint
+        lLidL: 0, lLidR: 0,
+        pupilW: 20, pupilH: 20,
+        pupilBg: 'radial-gradient(circle at 36% 32%, #ffcccc, #ff4444 48%, #aa0000)',
+        pupilGlow: '0 0 10px #ff4444, 0 0 24px rgba(255,68,68,0.8)',
+        ant: '#ff4444',
+        socketGlow: '0 0 0 2px rgba(255,68,68,0.4)',
+        robotClass: 'angry',
+      },
+      sleepy: {
+        label: 'z SLEEPY',
+        browL: { r: 0, y: 4 },
+        browR: { r: 0, y: 4 },
+        browColor: 'rgba(80,120,180,0.5)',
+        browGlow: '0 0 5px rgba(80,120,180,0.4)',
+        uLidL: 58, uLidR: 58,   // half-closed eyes
+        lLidL: 8, lLidR: 8,
+        pupilW: 18, pupilH: 18,
+        pupilBg: 'radial-gradient(circle at 36% 32%, #88aabb, #2266aa 48%, #112244)',
+        pupilGlow: '0 0 5px #2266aa, 0 0 12px rgba(34,102,170,0.4)',
+        ant: '#2266aa',
+        socketGlow: '0 0 0 1px rgba(34,102,170,0.15)',
+        robotClass: '',
+      },
+      curious: {
+        label: '? CURIOUS',
+        browL: { r: -12, y: -4 },   // left brow raised
+        browR: { r: 0, y: 0 },
+        browColor: 'rgba(80,200,255,0.8)',
+        browGlow: '0 0 9px rgba(80,200,255,0.75)',
+        uLidL: 0, uLidR: 18,   // right eye slightly squinting
+        lLidL: 0, lLidR: 0,
+        pupilW: 24, pupilH: 24,
+        pupilBg: 'radial-gradient(circle at 36% 32%, #d0f5ff, #28d8ff 48%, #0088cc)',
+        pupilGlow: '0 0 8px #28d8ff, 0 0 20px rgba(40,216,255,0.75)',
+        ant: '#22ccff',
+        socketGlow: '0 0 0 1.5px rgba(50,160,255,0.22)',
+        robotClass: '',
+      },
+    };
+
+    /* ── State ── */
+    let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+    let prevMx = mx, prevMy = my;
+    let currentEmotion = 'neutral';
+    let isBlinking = false;
+    let blinkTimeout;
+    let idleTimeout;
+    let sleepTimeout;
+    let clickCount = 0;
+    let clickResetTimer;
+    let emotionLock = false;   // prevents overrides during timed emotions
+    let lockTimer;
+
+    /* ── Apply emotion ── */
+    function applyEmotion(name) {
+      if (currentEmotion === name) return;
+      currentEmotion = name;
+      const e = EMOTIONS[name];
+
+      // Eyebrows
+      browL.style.transform = `rotate(${e.browL.r}deg) translateY(${e.browL.y}px)`;
+      browR.style.transform = `rotate(${e.browR.r}deg) translateY(${e.browR.y}px)`;
+      browL.style.background = browR.style.background = e.browColor;
+      browL.style.boxShadow = browR.style.boxShadow = e.browGlow;
+
+      // Upper lids: translateY(-100% + lidPct) i.e. 0% = fully hidden above, 100% = fully covering
+      ulidL.style.transform = `translateY(${-100 + e.uLidL}%)`;
+      ulidR.style.transform = `translateY(${-100 + e.uLidR}%)`;
+      // Lower lids: translateY(100% - lidPct)
+      llidL.style.transform = `translateY(${100 - e.lLidL}%)`;
+      llidR.style.transform = `translateY(${100 - e.lLidR}%)`;
+      // Lid color matches face panel
+      [ulidL, ulidR, llidL, llidR].forEach(l => l.style.background = '#050c1c');
+
+      // Pupils
+      [pupilL, pupilR].forEach(p => {
+        p.style.width = e.pupilW + 'px';
+        p.style.height = e.pupilH + 'px';
+        p.style.background = e.pupilBg;
+        p.style.boxShadow = e.pupilGlow;
+        // Re-center after size change
+        p.style.marginLeft = -(e.pupilW / 2) + 'px';
+        p.style.marginTop = -(e.pupilH / 2) + 'px';
+      });
+
+      // Antenna
+      antBall.style.background = `radial-gradient(circle at 38% 30%, #fff, ${e.ant}, #004488)`;
+      antBall.style.boxShadow = `0 0 10px ${e.ant}, 0 0 22px ${e.ant}88`;
+
+      // Socket glow
+      [socketL, socketR].forEach(s => s.style.boxShadow = `inset 0 0 14px rgba(0,0,0,0.8), ${e.socketGlow}`);
+
+      // Robot class
+      robot.className = 'robot ' + (e.robotClass || '');
+
+      // Labels
+      moodLabel.textContent = name.toUpperCase();
+      emotionTag.textContent = e.label;
+    }
+
+    /* Adjust pupil base position to account for center after size */
+    [pupilL, pupilR].forEach(p => {
+      p.style.top = '50%';
+      p.style.left = '50%';
+      // real centering done via margin (set in applyEmotion)
+    });
+    applyEmotion('neutral');
+
+    /* ── Eye tracking ── */
+    const MAX_TRAVEL = 10;
+
+    function trackEye(socket, pupil, emotion) {
+      const r = socket.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = mx - cx, dy = my - cy;
+      const angle = Math.atan2(dy, dx);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const travel = Math.min(dist / 85, 1) * MAX_TRAVEL;
+      const ox = Math.cos(angle) * travel;
+      const oy = Math.sin(angle) * travel;
+      const e = EMOTIONS[emotion];
+      const hw = e.pupilW / 2, hh = e.pupilH / 2;
+      pupil.style.transform = `translate(calc(-50% + ${ox.toFixed(2)}px), calc(-50% + ${oy.toFixed(2)}px))`;
+    }
+
+    /* Sleepy: slow drifting */
+    let driftAngle = 0;
+    function trackEyeSleepy(pupil) {
+      driftAngle += 0.015;
+      const ox = Math.cos(driftAngle) * 3;
+      const oy = Math.sin(driftAngle * 0.6) * 1.5;
+      pupil.style.transform = `translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`;
+    }
+
+    function loop() {
+      if (!isBlinking) {
+        if (currentEmotion === 'sleepy') {
+          trackEyeSleepy(pupilL);
+          trackEyeSleepy(pupilR);
+        } else {
+          trackEye(socketL, pupilL, currentEmotion);
+          trackEye(socketR, pupilR, currentEmotion);
+        }
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+
+    /* ── Blink ── */
+    function doBlink() {
+      if (currentEmotion === 'sleepy') return; // sleepy blinks constantly via lids
+      isBlinking = true;
+      [blinkL, blinkR].forEach(b => {
+        b.style.transition = 'transform 0.09s ease-in';
+        b.style.transform = 'scaleY(1)';
+      });
+      setTimeout(() => {
+        [blinkL, blinkR].forEach(b => {
+          b.style.transition = 'transform 0.1s ease-out';
+          b.style.transform = 'scaleY(0)';
+        });
+        setTimeout(() => { isBlinking = false; }, 120);
+      }, 130);
+      blinkTimeout = setTimeout(doBlink, 2600 + Math.random() * 3800);
+    }
+    blinkTimeout = setTimeout(doBlink, 1500);
+
+    /* ── Tears (sad) ── */
+    function spawnTear(socket) {
+      const t = document.createElement('div');
+      t.className = 'tear';
+      socket.appendChild(t);
+      setTimeout(() => t.remove(), 1900);
+    }
+    let tearTimer;
+    function startTears() {
+      tearTimer = setInterval(() => {
+        if (currentEmotion !== 'sad') { clearInterval(tearTimer); return; }
+        spawnTear(socketL);
+        setTimeout(() => spawnTear(socketR), 400);
+      }, 2200);
+    }
+
+    /* ── Emotion logic ── */
+    function setEmotionTimed(name, ms) {
+      emotionLock = true;
+      applyEmotion(name);
+      clearTimeout(lockTimer);
+      lockTimer = setTimeout(() => { emotionLock = false; }, ms);
+    }
+
+    /* ── Mouse move ── */
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      cursor.style.left = mx + 'px';
+      cursor.style.top = my + 'px';
+
+      const speed = Math.hypot(mx - prevMx, my - prevMy);
+      prevMx = mx; prevMy = my;
+
+      // Reset idle/sleep timers
+      clearTimeout(idleTimeout);
+      clearTimeout(sleepTimeout);
+      if (currentEmotion === 'sleepy' || currentEmotion === 'sad') {
+        if (!emotionLock) applyEmotion('neutral');
+      }
+
+      if (!emotionLock) {
+        if (speed > 75) applyEmotion('excited');
+        else if (speed > 28) applyEmotion('curious');
+        else applyEmotion('neutral');
+      }
+
+      // Idle → sad → sleepy chain
+      idleTimeout = setTimeout(() => {
+        if (!emotionLock) {
+          applyEmotion('sad');
+          startTears();
+          sleepTimeout = setTimeout(() => {
+            if (!emotionLock) applyEmotion('sleepy');
+          }, 5000);
+        }
+      }, 5000);
+    });
+
+    /* ── Rage sequence ── */
+    const crackOverlay = document.getElementById('crackOverlay');
+    let rageMode = false;
+
+    function triggerRage() {
+      if (rageMode) return;
+      rageMode = true;
+      emotionLock = true;
+      clickCount = 0;
+      clearTimeout(lockTimer);
+
+      // 1. Violent shake
+      robot.className = 'robot rage-shake';
+      applyEmotion('angry');
+
+      // 2. Wind-up → punch
+      setTimeout(() => {
+        robot.className = 'robot rage-punch';
+
+        // Impact: flash + crack
+        setTimeout(() => {
+          const flash = document.createElement('div');
+          flash.className = 'screen-flash';
+          document.body.appendChild(flash);
+          setTimeout(() => flash.remove(), 420);
+          crackOverlay.classList.add('show');
+        }, 220);
+
+        // 3. Storm off in anger
+        setTimeout(() => {
+          robot.className = 'robot rage-exit';
+
+          // 4. Crack fades, robot sneaks back
+          setTimeout(() => {
+            crackOverlay.classList.add('fade');
+            setTimeout(() => crackOverlay.classList.remove('show', 'fade'), 1900);
+
+            robot.className = 'robot rage-return';
+            setTimeout(() => {
+              robot.className = 'robot';
+              emotionLock = false;
+              rageMode = false;
+              applyEmotion('neutral');
+            }, 900);
+          }, 2400);
+        }, 720);
+      }, 580);
+    }
+
+    /* ── Click ── */
+    document.addEventListener('mousedown', e => {
+      cursor.classList.add('clicking');
+      if (rageMode) return;
+
+      // Ripple
+      const rip = document.createElement('div');
+      rip.className = 'ripple';
+      rip.style.cssText = `left:${e.clientX}px;top:${e.clientY}px;width:46px;height:46px;`;
+      document.body.appendChild(rip);
+      setTimeout(() => rip.remove(), 620);
+
+      clickCount++;
+      clearTimeout(clickResetTimer);
+      clickResetTimer = setTimeout(() => { clickCount = 0; }, 2200);
+
+      // 7 rapid clicks → full RAGE
+      if (clickCount >= 7) {
+        triggerRage();
+        return;
+      }
+
+      // 4–6 clicks → angry (stays angry, building toward rage)
+      if (clickCount >= 4) {
+        setEmotionTimed('angry', 99999);
+        return;
+      }
+
+      // 1–3 clicks → surprised then happy
+      setEmotionTimed('surprised', 600);
+      setTimeout(() => {
+        if (!emotionLock || currentEmotion === 'surprised') {
+          emotionLock = false;
+          setEmotionTimed('happy', 2400);
+        }
+      }, 650);
+    });
+
+    document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+
+    /* ── Mouse leaves/enters ── */
+    document.addEventListener('mouseleave', () => {
+      if (!emotionLock) {
+        applyEmotion('sad');
+        startTears();
+      }
+    });
+    document.addEventListener('mouseenter', () => {
+      clearInterval(tearTimer);
+      if (!emotionLock) setEmotionTimed('happy', 1800);
+    });
+
+    /* ── Particles ── */
+    const CLR = ['#b0d8ff', '#d0b8ff', '#88eeff', '#fff', '#c8b8ff', '#80ffdd'];
+    function spawnP() {
+      const p = document.createElement('div');
+      const s = 3 + Math.random() * 5;
+      p.className = 'p';
+      p.style.cssText = [
+        `width:${s}px`, `height:${s}px`,
+        `left:${Math.random() * 100}%`,
+        `bottom:-${s}px`,
+        `background:${CLR[~~(Math.random() * CLR.length)]}`,
+        `animation-duration:${9 + Math.random() * 10}s`,
+        `animation-delay:${Math.random() * 3}s`,
+        `filter:blur(${Math.random() > .6 ? 1 : 0}px)`,
+      ].join(';');
+      particles.appendChild(p);
+      setTimeout(() => p.remove(), 19000);
+    }
+    for (let i = 0; i < 10; i++) spawnP();
+    setInterval(spawnP, 750);
+
+    /* ── Greeting ── */
+    setTimeout(() => setEmotionTimed('happy', 2500), 600);
+
+    /* ── Theme toggle ── */
+    document.getElementById('themeCheck').addEventListener('change', function () {
+      document.body.classList.toggle('dark', this.checked);
+    });
+  </script>
+</body>
+
+</html>
